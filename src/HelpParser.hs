@@ -1,19 +1,19 @@
 {-----------------------------------------------------------------
- 
-  (c) 2008-2009 Markus Dittrich 
- 
-  This program is free software; you can redistribute it 
-  and/or modify it under the terms of the GNU General Public 
-  License Version 3 as published by the Free Software Foundation. 
- 
+
+  (c) 2008-2009 Markus Dittrich
+
+  This program is free software; you can redistribute it
+  and/or modify it under the terms of the GNU General Public
+  License Version 3 as published by the Free Software Foundation.
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License Version 3 for more details.
- 
-  You should have received a copy of the GNU General Public 
-  License along with this program; if not, write to the Free 
-  Software Foundation, Inc., 59 Temple Place - Suite 330, 
+
+  You should have received a copy of the GNU General Public
+  License along with this program; if not, write to the Free
+  Software Foundation, Inc., 59 Temple Place - Suite 330,
   Boston, MA 02111-1307, USA.
 
 --------------------------------------------------------------------}
@@ -24,6 +24,7 @@ module HelpParser ( help ) where
 
 -- imports
 import Control.Monad
+import Data.Maybe
 
 -- local imports
 import CalculatorState
@@ -37,13 +38,11 @@ import UnitConversionParser
 
 -- | main help parser entry point
 help :: CharParser CalcState String
-help = eval_request <$> (help_keyword 
+help = eval_request <$> (help_keyword
                          *> optionMaybe parse_help_option)
     <?> "help"
  where
-   eval_request x = case x of
-                      Nothing -> help_info
-                      Just r  -> r
+   eval_request = fromMaybe help_info
 
 
 -- | parser for help keyword
@@ -62,7 +61,7 @@ parse_help_option = msum . map snd $ helpOptions
 
 -- | retrieve unit conversion information
 unit_info :: CharParser CalcState String
-unit_info = retrieve_unit_string <$> (string "units" 
+unit_info = retrieve_unit_string <$> (string "units"
                                       *> optionMaybe parse_unit_type)
          <?> "unit info"
 
@@ -82,7 +81,7 @@ command_info = string "commands" *> pure commandString
 
 -- | currently available commands
 commandString :: String
-commandString = (color_string Yellow $ "Available commands:\n")
+commandString = color_string Yellow "Available commands:\n"
                 ++ "\\q    - quit\n"
                 ++ "\\t    - show current date and time\n"
                 ++ "\\v    - list currently defined variables\n"
@@ -91,8 +90,8 @@ commandString = (color_string Yellow $ "Available commands:\n")
 
 -- | return all currently available help options
 help_info :: String
-help_info = (color_string Yellow $ "Available help options"
-             ++ " (request via \\[h]elp <option>):\n") 
+help_info = color_string Yellow "Available help options"
+             ++ " (request via \\[h]elp <option>):\n"
              ++ help_string
   where
     help_string = unlines . map fst $ helpOptions
@@ -103,6 +102,6 @@ help_info = (color_string Yellow $ "Available help options"
 helpOptions :: [(String, CharParser CalcState String)]
 helpOptions = [ ("about                  - about husky", about_info)
               , ("commands               - list commands", command_info)
-              , ("conversion [:: <type>] - list available unit "
-                 ++ "conversions", unit_info) 
+              , ("units [:: <type>] - list available unit "
+                 ++ "conversions", unit_info)
               ]

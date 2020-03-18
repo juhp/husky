@@ -1,19 +1,19 @@
 {-----------------------------------------------------------------
- 
-  (c) 2008-2009 Markus Dittrich 
- 
-  This program is free software; you can redistribute it 
-  and/or modify it under the terms of the GNU General Public 
-  License Version 3 as published by the Free Software Foundation. 
- 
+
+  (c) 2008-2009 Markus Dittrich
+
+  This program is free software; you can redistribute it
+  and/or modify it under the terms of the GNU General Public
+  License Version 3 as published by the Free Software Foundation.
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License Version 3 for more details.
- 
-  You should have received a copy of the GNU General Public 
-  License along with this program; if not, write to the Free 
-  Software Foundation, Inc., 59 Temple Place - Suite 330, 
+
+  You should have received a copy of the GNU General Public
+  License along with this program; if not, write to the Free
+  Software Foundation, Inc., 59 Temple Place - Suite 330,
   Boston, MA 02111-1307, USA.
 
 --------------------------------------------------------------------}
@@ -37,20 +37,20 @@ import PrettyPrint
 import TokenParser
 
 
--- | top level main routine 
--- we use the Writer monad to capture the results for all tests 
+-- | top level main routine
+-- we use the Writer monad to capture the results for all tests
 -- and then examine the results afterward
 main :: IO ()
 main = do
   putStrLn "\n\n\nTesting conversion function parser ..."
 
   putStr $ color_string Cyan "\nSimple tests:\n"
-  let simple1 = execWriter $ good_test_driver defaultCalcState 
+  let simple1 = execWriter $ good_test_driver defaultCalcState
                simpleTests
   status1 <- examine_output simple1
 
   putStr $ color_string Cyan "\nFailing tests:\n"
-  let simple2 = execWriter $ failing_test_driver defaultCalcState 
+  let simple2 = execWriter $ failing_test_driver defaultCalcState
                failingTests
   status2 <- examine_output simple2
 
@@ -60,23 +60,23 @@ main = do
 
 
   let status = status1 && status2
-  if status == True then
-      exitWith ExitSuccess
+  if status then
+      exitSuccess
     else
       exitWith $ ExitFailure 1
-   
+
 
 -- | helper function for examining the output of a good test run
--- (i.e. one that should succeed), prints out the result for each 
--- test, collects the number of successes/failures and returns 
+-- (i.e. one that should succeed), prints out the result for each
+-- test, collects the number of successes/failures and returns
 -- True in case all tests succeeded and False otherwise
 examine_output :: [TestResult] -> IO Bool
 examine_output = foldM examine_output_h True
-                 
+
   where
     examine_output_h :: Bool -> TestResult -> IO Bool
-    examine_output_h acc (TestResult status token target actual) = do
-      if status == True then do
+    examine_output_h acc (TestResult status token target actual) =
+      if status then do
           putStr   $ color_string Blue "["
           putStr   $ color_string White "OK"
           putStr   $ color_string Blue  "] "
@@ -89,15 +89,15 @@ examine_output = foldM examine_output_h True
           putStr   $ color_string Blue "] "
           putStr   $ color_string Green " Failed to evaluate "
           putStrLn $ color_string Yellow token
-          putStrLn $ color_string Green "\t\texpected : " 
-                       ++ (show target)
-          putStrLn $ color_string Green "\t\tgot      : " 
-                       ++ (show actual)
+          putStrLn $ color_string Green "\t\texpected : "
+                       ++ show target
+          putStrLn $ color_string Green "\t\tgot      : "
+                       ++ show actual
           return False
-    
+
 
 -- | main test routine for "good tests"
-good_test_driver :: CalcState -> [GoodTestCase] 
+good_test_driver :: CalcState -> [GoodTestCase]
                  -> Writer [TestResult] ()
 good_test_driver _ []         = return ()
 good_test_driver state (x:xs) = do
@@ -107,15 +107,15 @@ good_test_driver state (x:xs) = do
   case runParser main_parser state "" tok of
     Left er -> tell [TestResult False tok (show expected) (show er)]
     Right (UnitResult result, newState) -> examine_result expected result tok
-        
+
       where
         -- NOTE: when we compare target and actual result we
         -- probably need to be more careful and can't use ==
         -- if we are dealing with Doubles!!!
-        examine_result :: (Double,String) -> (Double,String) 
+        examine_result :: (Double,String) -> (Double,String)
                        -> String -> Writer [TestResult] ()
-        examine_result (t_value,t_unit) (a_value,a_unit) tok = 
-          if ((is_equal t_value a_value) && (t_unit == a_unit)) 
+        examine_result (t_value,t_unit) (a_value,a_unit) tok =
+          if is_equal t_value a_value && (t_unit == a_unit)
             then do
               tell [TestResult True tok target_string actual_string]
               good_test_driver newState xs
@@ -124,28 +124,27 @@ good_test_driver state (x:xs) = do
               good_test_driver newState xs
 
             where
-              actual_string = (show a_value) ++ " " ++ a_unit
-              target_string = (show t_value) ++ " " ++ t_unit
+              actual_string = show a_value ++ " " ++ a_unit
+              target_string = show t_value ++ " " ++ t_unit
 
 
 -- | main test routine for "failing tests"
-failing_test_driver :: CalcState -> [FailingTestCase] 
+failing_test_driver :: CalcState -> [FailingTestCase]
                     -> Writer [TestResult] ()
 failing_test_driver _ []         = return ()
-failing_test_driver state (x:xs) = do
-
+failing_test_driver state (x:xs) =
   case runParser main_parser state "" x of
-    Left er               -> 
+    Left er               ->
         tell [TestResult True x "Failure" "Failure"]
         >> failing_test_driver state xs
 
-    Right (ErrResult _,_) -> 
+    Right (ErrResult _,_) ->
         tell [TestResult True x "Failure" "Failure"]
         >> failing_test_driver state xs
 
-    _             -> 
+    _             ->
         tell [TestResult False x "Failure" "Success"]
- 
+
 
 -- | our test results consist of a bool indicating success
 -- or failure, the test token as well as the expected and
@@ -168,20 +167,20 @@ type GoodTestCase  = (String, (Double,String))
 
 -- | a failing test case currently consists only of an
 -- expression to be parser and we simply tests if it
--- fails as expected. 
+-- fails as expected.
 -- FIXME:
--- In principle, we should check for the correct failure 
--- message. However, since I am still playing with the parser 
+-- In principle, we should check for the correct failure
+-- message. However, since I am still playing with the parser
 -- these may change so for now we just check for failure.
 type FailingTestCase = String
 
 
--- NOTE: For each "run" of test_driver we thread a common 
+-- NOTE: For each "run" of test_driver we thread a common
 -- calculator state to be able to test variable assignment
 -- and use. Therefore, the order of which tests appear in
 -- a [GoodTestCase] may matter if variable definitions are involved.
 -- I.e., think twice when changing the order, or keep order
--- dependend and independent sets in different lists 
+-- dependend and independent sets in different lists
 simpleTests :: [GoodTestCase]
 simpleTests = [ simpleTest1, simpleTest2, simpleTest3, simpleTest4
               , simpleTest5, simpleTest6, simpleTest7, simpleTest8
@@ -208,7 +207,7 @@ simpleTest5 = ("conv 23F K", (268.15,"K"))
 
 simpleTest6 :: GoodTestCase
 simpleTest6 = ("conv 45K F", (-378.67,"F"))
- 
+
 simpleTest7 :: GoodTestCase
 simpleTest7 = ("conv 1ft m", (0.3048,"m"))
 
@@ -252,7 +251,7 @@ simpleTest20 :: GoodTestCase
 simpleTest20 = ("conv 1.23yd m", (1.124712, "m"))
 
 
--- a few tests that are failing 
+-- a few tests that are failing
 failingTests :: [FailingTestCase]
 failingTests = [ failingTest1, failingTest2, failingTest3
                , failingTest4, failingTest5, failingTest6
@@ -261,40 +260,40 @@ failingTests = [ failingTest1, failingTest2, failingTest3
 
 -- list of failing tests
 failingTest1 :: FailingTestCase
-failingTest1 = ("conv 1F F")
+failingTest1 = "conv 1F F"
 
 failingTest2 :: FailingTestCase
-failingTest2 = ("conv 1C D")
+failingTest2 = "conv 1C D"
 
 failingTest3 :: FailingTestCase
-failingTest3 = ("conv C F")
+failingTest3 = "conv C F"
 
 failingTest4 :: FailingTestCase
-failingTest4 = ("conv 1F mi")
+failingTest4 = "conv 1F mi"
 
 failingTest5 :: FailingTestCase
-failingTest5 = ("conv 1mi mi")
+failingTest5 = "conv 1mi mi"
 
 failingTest6 :: FailingTestCase
-failingTest6 = ("conv 1mi 1K")
+failingTest6 = "conv 1mi 1K"
 
 failingTest7 :: FailingTestCase
-failingTest7 = ("conv 1nmi yd")
+failingTest7 = "conv 1nmi yd"
 
 failingTest8 :: FailingTestCase
-failingTest8 = ("conv 1yd yd")
+failingTest8 = "conv 1yd yd"
 
 failingTest9 :: FailingTestCase
-failingTest9 = ("conv 1K K")
+failingTest9 = "conv 1K K"
 
 failingTest10 :: FailingTestCase
-failingTest10 = ("conv 1F F")
+failingTest10 = "conv 1F F"
 
 failingTest11 :: FailingTestCase
-failingTest11 = ("c 1C yd")
+failingTest11 = "c 1C yd"
 
 failingTest12 :: FailingTestCase
-failingTest12 = ("conv c c 1")
+failingTest12 = "conv c c 1"
 
 
 -- | list of unit conversion pairs for inversion test
@@ -332,8 +331,8 @@ unitPair7 = ("m","nmi")
 -- shell
 check_invertibility :: IO ()
 check_invertibility =
-    (putStr $ color_string Cyan "\n\nCheck Invertibility ..\n") 
-    >> mapM_ (\x -> quickCheck $ prop_invert (fst x) (snd x)) 
+    putStr $ color_string Cyan "\n\nCheck Invertibility ..\n"
+    >> mapM_ (\x -> quickCheck $ uncurry prop_invert x)
        unitPairs
 
 
@@ -341,16 +340,16 @@ check_invertibility =
 -- in a nutshell if our conversion functions are invertible,
 -- e.g. \c (\c 5yd m)m yd == 5
 -- NOTE: We could use Double here instead of Integer but then
--- we had to make dbl_epsilon slightly less strict 
+-- we had to make dbl_epsilon slightly less strict
 prop_invert :: String -> String -> Integer -> Bool
 prop_invert u1 u2 i =
   case runParser main_parser defaultCalcState "" $ test_to i of
     Left _  -> False
-    Right (UnitResult (x,_),_) -> 
+    Right (UnitResult (x,_),_) ->
       case runParser main_parser defaultCalcState "" $ test_from x of
         Left _ -> False
         Right (UnitResult (y,_),_) -> is_equal (fromInteger i) y
 
   where
-    test_to z   = "conv " ++ (show z) ++ u1 ++ " " ++ u2
-    test_from z = "conv " ++ (show z) ++ u2 ++ " " ++ u1
+    test_to z   = "conv " ++ show z ++ u1 ++ " " ++ u2
+    test_from z = "conv " ++ show z ++ u2 ++ " " ++ u1

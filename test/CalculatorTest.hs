@@ -1,19 +1,19 @@
 {-----------------------------------------------------------------
- 
-  (c) 2008-2009 Markus Dittrich 
- 
-  This program is free software; you can redistribute it 
-  and/or modify it under the terms of the GNU General Public 
-  License Version 3 as published by the Free Software Foundation. 
- 
+
+  (c) 2008-2009 Markus Dittrich
+
+  This program is free software; you can redistribute it
+  and/or modify it under the terms of the GNU General Public
+  License Version 3 as published by the Free Software Foundation.
+
   This program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License Version 3 for more details.
- 
-  You should have received a copy of the GNU General Public 
-  License along with this program; if not, write to the Free 
-  Software Foundation, Inc., 59 Temple Place - Suite 330, 
+
+  You should have received a copy of the GNU General Public
+  License along with this program; if not, write to the Free
+  Software Foundation, Inc., 59 Temple Place - Suite 330,
   Boston, MA 02111-1307, USA.
 
 --------------------------------------------------------------------}
@@ -36,60 +36,60 @@ import PrettyPrint
 import TokenParser
 
 
--- | top level main routine 
--- we use the Writer monad to capture the results for all tests 
+-- | top level main routine
+-- we use the Writer monad to capture the results for all tests
 -- and then examine the results afterward
 main :: IO ()
 main = do
   putStrLn "\n\n\nTesting calculator Parser ..."
 
   putStr $ color_string Cyan "\nSimple tests:\n"
-  let simple = execWriter $ good_test_driver defaultCalcState 
+  let simple = execWriter $ good_test_driver defaultCalcState
                simpleTests
   status1 <- examine_output simple
 
   putStr $ color_string Cyan "\nFunction parsing tests:\n"
-  let vars = execWriter $ good_test_driver defaultCalcState 
+  let vars = execWriter $ good_test_driver defaultCalcState
              functionTests
   status2 <- examine_output vars
- 
+
   putStr $ color_string Cyan "\nVariable tests:\n"
-  let vars = execWriter $ good_test_driver defaultCalcState 
+  let vars = execWriter $ good_test_driver defaultCalcState
              variableTests
   status3 <- examine_output vars
 
   putStr $ color_string Cyan "\nFailure tests:\n"
-  let failing = execWriter $ failing_test_driver defaultCalcState 
+  let failing = execWriter $ failing_test_driver defaultCalcState
                 failingTests
   status4 <- examine_output failing
 
   putStr $ color_string Cyan "\nUser defined function tests:\n"
-  let userFuncs = execWriter $ good_test_driver defaultCalcState 
+  let userFuncs = execWriter $ good_test_driver defaultCalcState
                   userFunctionTests
   status5 <- examine_output userFuncs
 
   -- check a few properties via QuickCheck
   check_erf_erfc
-   
+
 
   let status = status1 && status2 && status3 && status4 && status5
-  if status == True then
-      exitWith ExitSuccess
+  if status then
+      exitSuccess
     else
       exitWith $ ExitFailure 1
-   
+
 
 -- | helper function for examining the output of a good test run
--- (i.e. one that should succeed), prints out the result for each 
--- test, collects the number of successes/failures and returns 
+-- (i.e. one that should succeed), prints out the result for each
+-- test, collects the number of successes/failures and returns
 -- True in case all tests succeeded and False otherwise
 examine_output :: [TestResult] -> IO Bool
 examine_output = foldM examine_output_h True
-                 
+
   where
     examine_output_h :: Bool -> TestResult -> IO Bool
-    examine_output_h acc (TestResult status token target actual) = do
-      if status == True then do
+    examine_output_h acc (TestResult status token target actual) =
+      if status then do
           putStr   $ color_string Blue "["
           putStr   $ color_string White "OK"
           putStr   $ color_string Blue  "] "
@@ -102,15 +102,15 @@ examine_output = foldM examine_output_h True
           putStr   $ color_string Blue "] "
           putStr   $ color_string Green " Failed to evaluate "
           putStrLn $ color_string Yellow token
-          putStrLn $ color_string Green "\t\texpected : " 
-                       ++ (show target)
-          putStrLn $ color_string Green "\t\tgot      : " 
-                       ++ (show actual)
+          putStrLn $ color_string Green "\t\texpected : "
+                       ++ show target
+          putStrLn $ color_string Green "\t\tgot      : "
+                       ++ show actual
           return False
-    
+
 
 -- | main test routine for "good tests"
-good_test_driver :: CalcState -> [GoodTestCase] 
+good_test_driver :: CalcState -> [GoodTestCase]
                  -> Writer [TestResult] ()
 good_test_driver _ []         = return ()
 good_test_driver state (x:xs) = do
@@ -120,22 +120,22 @@ good_test_driver state (x:xs) = do
   case runParser main_parser state "" tok of
     Left er -> tell [TestResult False tok (show expected) (show er)]
     Right (result, newState) -> examine_result expected result tok
-        
+
       where
         -- for comparing doubles we use is_equal otherwise we
         -- go with good old ==
-        examine_result :: ParseResult -> ParseResult -> String 
+        examine_result :: ParseResult -> ParseResult -> String
                        -> Writer [TestResult] ()
-        examine_result (DblResult target) (DblResult actual) tok = 
-          if (is_equal target actual) 
+        examine_result (DblResult target) (DblResult actual) tok =
+          if is_equal target actual
              then success target actual
              else failure target actual
 
-        examine_result target actual tok = 
-          if target == actual 
+        examine_result target actual tok =
+          if target == actual
              then success target actual
              else failure target actual
-        
+
 
        {-     then do
               tell [TestResult True tok (show target) (show actual)]
@@ -150,21 +150,20 @@ good_test_driver state (x:xs) = do
 
         failure target actual = do
           tell [TestResult False tok (show target) (show actual)]
-          good_test_driver newState xs 
+          good_test_driver newState xs
 
 
 -- | main test routine for "failing tests"
-failing_test_driver :: CalcState -> [FailingTestCase] 
+failing_test_driver :: CalcState -> [FailingTestCase]
                     -> Writer [TestResult] ()
 failing_test_driver _ []         = return ()
-failing_test_driver state (x:xs) = do
-
+failing_test_driver state (x:xs) =
   case runParser main_parser state "" x of
     Left er  -> tell [TestResult True x "Failure" "Failure"]
                 >> failing_test_driver state xs
     Right _  -> tell [TestResult False x "Failure" "Success"]
-                  
- 
+
+
 -- | our test results consist of a bool indicating success
 -- or failure, the test token as well as the expected and
 -- received result
@@ -186,20 +185,20 @@ type GoodTestCase  = (String, ParseResult)
 
 -- | a failing test case currently consists only of an
 -- expression to be parser and we simply tests if it
--- fails as expected. 
+-- fails as expected.
 -- FIXME:
--- In principle, we should check for the correct failure 
--- message. However, since I am still playing with the parser 
+-- In principle, we should check for the correct failure
+-- message. However, since I am still playing with the parser
 -- these may change so for now we just check for failure.
 type FailingTestCase = String
 
 
--- NOTE: For each "run" of test_driver we thread a common 
+-- NOTE: For each "run" of test_driver we thread a common
 -- calculator state to be able to test variable assignment
 -- and use. Therefore, the order of which tests appear in
 -- a [GoodTestCase] may matter if variable definitions are involved.
 -- I.e., think twice when changing the order, or keep order
--- dependend and independent sets in different lists 
+-- dependend and independent sets in different lists
 simpleTests :: [GoodTestCase]
 simpleTests = [ simpleTest1, simpleTest2, simpleTest3, simpleTest4
               , simpleTest5, simpleTest6, simpleTest7
@@ -324,10 +323,10 @@ variableTests :: [GoodTestCase]
 variableTests = [ variableTest1, variableTest2, variableTest3
                 , variableTest4, variableTest5, variableTest6
                 , variableTest7, variableTest8, variableTest9
-                , variableTest10, variableTest11, variableTest12 
+                , variableTest10, variableTest11, variableTest12
                 , variableTest13, variableTest14, variableTest15
                 , variableTest16, variableTest17, variableTest18
-                , variableTest19, variableTest20 ] 
+                , variableTest19, variableTest20 ]
 
 -- list of variable tests
 variableTest1 :: GoodTestCase
@@ -358,7 +357,7 @@ variableTest9 :: GoodTestCase
 variableTest9 = ("(a*b) - kjhdskfsd123hjksdf", DblResult 0)
 
 variableTest10 :: GoodTestCase
-variableTest10 = ("c = 2", DblResult 2) 
+variableTest10 = ("c = 2", DblResult 2)
 
 variableTest11 :: GoodTestCase
 variableTest11 = ("a-b-c + ( a + b + c ) + (a*a)", DblResult 168)
@@ -379,13 +378,13 @@ variableTest16 :: GoodTestCase
 variableTest16 = ("x = 2; y = 10^x; log10(y)", DblResult 2)
 
 variableTest17 :: GoodTestCase
-variableTest17 = ("c = 2; d = c; d", DblResult 2) 
+variableTest17 = ("c = 2; d = c; d", DblResult 2)
 
 variableTest18 :: GoodTestCase
 variableTest18 = (" x = pi; y = cos(x); acos(y)", DblResult pi)
 
 variableTest19 :: GoodTestCase
-variableTest19 = ("a = 5; -a", DblResult (-5.0)) 
+variableTest19 = ("a = 5; -a", DblResult (-5.0))
 
 variableTest20 :: GoodTestCase
 variableTest20 = ("b= 15; 3*( - b)", DblResult (-45))
@@ -400,7 +399,7 @@ functionTests = [ functionTest1, functionTest2, functionTest3
                 , functionTest7, functionTest8, functionTest9
                 , functionTest10, functionTest11, functionTest12
                 , functionTest13, functionTest14, functionTest15
-                , functionTest16, functionTest17, functionTest18 
+                , functionTest16, functionTest17, functionTest18
                 , functionTest19, functionTest20, functionTest21
                 ]
 
@@ -433,7 +432,7 @@ functionTest9 :: GoodTestCase
 functionTest9 = ("cos -0.5", DblResult 0.8775825618903728)
 
 functionTest10 :: GoodTestCase
-functionTest10 = ("cos(-0.5)", DblResult 0.8775825618903728) 
+functionTest10 = ("cos(-0.5)", DblResult 0.8775825618903728)
 
 functionTest11 :: GoodTestCase
 functionTest11 = ("cos 0.5 - cos -0.5", DblResult 0)
@@ -451,7 +450,7 @@ functionTest15 :: GoodTestCase
 functionTest15 = ("div 25 7", DblResult 3)
 
 functionTest16 :: GoodTestCase
-functionTest16 = ("mod 25 (-7)", DblResult (-3.0)) 
+functionTest16 = ("mod 25 (-7)", DblResult (-3.0))
 
 functionTest17 :: GoodTestCase
 functionTest17 = ("div 25 (-7)", DblResult (-4.0))
@@ -470,14 +469,14 @@ functionTest20 :: GoodTestCase
 functionTest20 = ("erf (-1.4)", DblResult (-9.522851197626486e-01))
 
 functionTest21 :: GoodTestCase
-functionTest21 = ("erfc(0)", DblResult 1) 
+functionTest21 = ("erfc(0)", DblResult 1)
 
 functionTest22 :: GoodTestCase
 functionTest22 = ("erfc  (5)", DblResult 1.53745979442803e-12)
 
 
 
--- a few tests that are failing 
+-- a few tests that are failing
 failingTests :: [FailingTestCase]
 failingTests = [ failingTest1, failingTest2, failingTest3
                , failingTest4, failingTest5, failingTest6
@@ -488,58 +487,58 @@ failingTests = [ failingTest1, failingTest2, failingTest3
 
 -- list of failing tests
 failingTest1 :: FailingTestCase
-failingTest1 = ("3+4b")
+failingTest1 = "3+4b"
 
 failingTest2 :: FailingTestCase
-failingTest2 = ("3*a3")
+failingTest2 = "3*a3"
 
 failingTest3 :: FailingTestCase
-failingTest3 = ("(3*3)B+(3*4)")
+failingTest3 = "(3*3)B+(3*4)"
 
 failingTest4 :: FailingTestCase
-failingTest4 = ("(3.0*3.0)+3.0*4.0)")
+failingTest4 = "(3.0*3.0)+3.0*4.0)"
 
 failingTest5 :: FailingTestCase
-failingTest5 = ("(3y3)*(9+8)")
+failingTest5 = "(3y3)*(9+8)"
 
 failingTest6 :: FailingTestCase
-failingTest6 = ("(3.0+3.0)*(9.0+8.0")
+failingTest6 = "(3.0+3.0)*(9.0+8.0"
 
 failingTest7 :: FailingTestCase
-failingTest7 = ("(((((((3.0+3.0)*(9.0+8.0))))))")
+failingTest7 = "(((((((3.0+3.0)*(9.0+8.0))))))"
 
 failingTest8 :: FailingTestCase
-failingTest8 = ("(((((((3.0+3.0))))*((((((9.0+8.0)))))))")
+failingTest8 = "(((((((3.0+3.0))))*((((((9.0+8.0)))))))"
 
 failingTest9 :: FailingTestCase
-failingTest9 = ("a3+3*99.0")
+failingTest9 = "a3+3*99.0"
 
 failingTest10 :: FailingTestCase
-failingTest10 = ("3+3*8+4*3++2+1*4*3+5")
+failingTest10 = "3+3*8+4*3++2+1*4*3+5"
 
 failingTest11 :: FailingTestCase
-failingTest11 = ("(3+3)**(8+4)*3*(2+1)*4*(3+5)")
+failingTest11 = "(3+3)**(8+4)*3*(2+1)*4*(3+5)"
 
 failingTest12 :: FailingTestCase
-failingTest12 = ("b")
+failingTest12 = "b"
 
 failingTest13 :: FailingTestCase
-failingTest13 = ("3+3;;3+4")
+failingTest13 = "3+3;;3+4"
 
 failingTest14 :: FailingTestCase
-failingTest14 = ("(3+3;4+4)")
+failingTest14 = "(3+3;4+4)"
 
 failingTest15 :: FailingTestCase
-failingTest15 = ("3+3, 3+3")
+failingTest15 = "3+3, 3+3"
 
 failingTest16 :: FailingTestCase
-failingTest16 = ("fact (-1)")
+failingTest16 = "fact (-1)"
 
 failingTest17 :: FailingTestCase
-failingTest17 = ("mod 4")
+failingTest17 = "mod 4"
 
 failingTest18 :: FailingTestCase
-failingTest18 = ("div 4")
+failingTest18 = "div 4"
 
 
 
@@ -548,11 +547,11 @@ failingTest18 = ("div 4")
 -- functions
 userFunctionTests :: [GoodTestCase]
 userFunctionTests = [ userFunctionTest1, userFunctionTest2
-                    , userFunctionTest3, userFunctionTest4 
+                    , userFunctionTest3, userFunctionTest4
                     , userFunctionTest5, userFunctionTest6
                     , userFunctionTest7, userFunctionTest8
                     , userFunctionTest9, userFunctionTest10
-                    , userFunctionTest11, userFunctionTest12 
+                    , userFunctionTest11, userFunctionTest12
                     , userFunctionTest13, userFunctionTest14
                     , userFunctionTest15, userFunctionTest16
                     , userFunctionTest17, userFunctionTest18
@@ -560,8 +559,8 @@ userFunctionTests = [ userFunctionTest1, userFunctionTest2
                     , userFunctionTest21, userFunctionTest22
                     , userFunctionTest23, userFunctionTest24
                     , userFunctionTest25, userFunctionTest26
-                    , userFunctionTest27, userFunctionTest28] 
- 
+                    , userFunctionTest27, userFunctionTest28]
+
 
 -- list of user defined function tests
 userFunctionTest1 :: GoodTestCase
@@ -656,15 +655,15 @@ userFunctionTest28 = ("sqrt( bar 1 1 1 )", DblResult 1.4142135623730951)
 
 
 -------------------------------------------------------------------
--- | Below are properties and wrappers used to test some functions 
--- (the ones or which I have figured out how to do it) via 
+-- | Below are properties and wrappers used to test some functions
+-- (the ones or which I have figured out how to do it) via
 -- QuickCheck
 -------------------------------------------------------------------
 
 -- | wrapper to test properties for erf and erfc via quickcheck
 check_erf_erfc :: IO ()
 check_erf_erfc =
-  (putStr $ color_string Cyan "\n\nChecking erf = (1 - erfc)\n")
+  putStr $ color_string Cyan "\n\nChecking erf = (1 - erfc)\n"
   >> quickCheck prop_erf_erfc
 
 
@@ -680,7 +679,7 @@ prop_erf_erfc d =
       case runParser main_parser defaultCalcState "" $ erfc_test d of
         Left _ -> False
         Right (DblResult r2,_) -> is_equal_with r1 (1.0 - r2) 1e-14
-  
+
   where
     erf_test d = "erf " ++ show d
     erfc_test d = "erfc " ++ show d

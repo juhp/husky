@@ -103,7 +103,7 @@ erf x
   | otherwise    = 2.0 / sqrt pi * erf_h x x 1.0
 
   where
-    x_next n = -(x^2) * (2*n-1)/(n * (2*n+1))
+    x_next n = -(x^(2::Int)) * (2*n-1)/(n * (2*n+1))
 
     erf_h old x_old n = let x_new = x_old * x_next n
                             tot   = old + x_new
@@ -125,14 +125,14 @@ erfc x
   | abs x < 2.2  = 1.0 - erf x   -- use erf(x) in [-2.2,2.2]
   | signum x < 0 = 2.0 - erfc (-x) -- continued fraction expansion
                                    -- only valid for x > 0
-  | otherwise     = 1/sqrt pi * exp(-x^2)
+  | otherwise     = 1/sqrt pi * exp(-x^(2::Int))
                     * erfc_h nc1 nc2 dc1 dc2 1.0
 
   where
     nc1 = NumReal 1.0  -- numerator of 1st convergent
     nc2 = x            -- numerator of 2nd convergent
     dc1 = x            -- denominator of 1st convergent
-    dc2 = x^2 + NumReal 0.5 -- denominator of 2nd convergent
+    dc2 = x^(2::Int) + NumReal 0.5 -- denominator of 2nd convergent
 
     erfc_h n1 n2 d1 d2 i =
       let num_new   = n1*i + n2*x

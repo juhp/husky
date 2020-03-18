@@ -94,5 +94,5 @@ conversion_keyword = reserved "conv"
 -- a unit conversion statement. It should be of the form
 -- (a la Haskell ;) ) " :: unit_type "
 parse_unit_type :: CharParser CalcState String
-parse_unit_type = whiteSpace *> string "::" *> whiteSpace *> unit_type
+parse_unit_type = whiteSpace *> unit_type
                <?> "unit_type"

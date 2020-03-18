@@ -102,6 +102,6 @@ help_info = color_string Yellow "Available help options"
 helpOptions :: [(String, CharParser CalcState String)]
 helpOptions = [ ("about                  - about husky", about_info)
               , ("commands               - list commands", command_info)
-              , ("units [:: <type>] - list available unit "
+              , ("units [<type>] - list available unit "
                  ++ "conversions", unit_info)
               ]

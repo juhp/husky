@@ -123,6 +123,7 @@ type UnitMap = M.Map String UnitConverter
 allConv :: M.Map String UnitMap
 allConv = M.fromList [ ("Temp", tempConv)
                      , ("Length", lengthConv)
+                     , ("Size", sizeConv)
                      ]
 
 
@@ -325,3 +326,52 @@ nmikm_conv_length = UnitConverter
                                  ++ "to kilometer"
                  }
 
+-- | size conversions
+-- https://en.wikipedia.org/wiki/Units_of_information
+
+data ByteUnit =
+  Bytes | KiloBytes | KibiBytes | MegaBytes | MebiBytes | GigaBytes | GibiBytes | TeraBytes | TebiBytes | PetaBytes | PebiBytes | ExaBytes | ExbiBytes
+  deriving (Show, Eq, Enum)
+
+-- | data structure holding size conversions
+sizeConv :: UnitMap
+sizeConv = M.fromList [(fst3 inp ++ fst3 out, conv_size inp out) | inp <- sizeUnits, out <- sizeUnits]
+  where
+    fst3 (x,_,_) = x
+
+data Size = Z | K Int | Ki Int
+
+toBytes :: Size -> Number
+toBytes Z = NumInt 1
+toBytes (K n) = NumInt $ 1000 ^ n
+toBytes (Ki n) = NumInt $ 1024 ^ n
+
+sizeUnits :: [(String, ByteUnit, Size)]
+sizeUnits = [ ("B", Bytes, Z)
+            , ("kB", KibiBytes, K 1)
+            , ("KiB", KibiBytes, Ki 1)
+            , ("MB", MebiBytes, K 2)
+            , ("MiB", MebiBytes, Ki 2)
+            , ("GB", GibiBytes, K 3)
+            , ("GiB", GibiBytes, Ki 3)
+            , ("TB", TebiBytes, K 4)
+            , ("TiB", TebiBytes, Ki 4)
+            , ("PB", PebiBytes, K 5)
+            , ("PiB", PebiBytes, Ki 5)
+            , ("EB", ExaBytes, K 6)
+            , ("EiB", ExbiBytes, Ki 6)
+            ]
+
+conv_size :: (String, ByteUnit, Size) -> (String, ByteUnit, Size) -> UnitConverter
+conv_size (is, inUnit, inSize) (os, outUnit, outSize) = UnitConverter
+               { converter   = \x ->
+                   case (inSize, outSize) of
+                     (Z, _) -> x / toBytes outSize
+                     (_, Z) -> x * toBytes inSize
+                     (K m, K n) | m >= n -> x * toBytes (K (m - n))
+                     (K m, K n) | m < n -> x / toBytes (K (n - m))
+                     (Ki m, Ki n) | m >= n -> x * toBytes (Ki (m - n))
+                     (Ki m, Ki n) | m < n -> x / toBytes (Ki (n - m))
+                     _ -> x * toBytes inSize / toBytes outSize
+               , description = is ++ " -> " ++  os ++ " :: " ++ show inUnit ++ " to " ++ show outUnit
+               }

@@ -23,8 +23,8 @@ module Main where
 
 
 -- imports
-import System.Console.Readline
-
+import System.Console.Haskeline
+import Control.Monad.IO.Class (liftIO)
 -- local imports
 import Parser
 import CalculatorState
@@ -40,15 +40,14 @@ import TokenParser
 main :: IO ()
 main = do
   show_greeting
-  parse_it defaultCalcState
-
+  runInputT defaultSettings $ parse_it defaultCalcState
 
 -- | main parse function
-parse_it :: CalcState -> IO ()
+parse_it :: CalcState -> InputT IO ()
 parse_it state = do
 
   -- prompt and get a line from stdin
-  input <- readline $ color_string Red "husky> "
+  input <- getInputLine $ color_string Red "husky> "
   case input of
     Nothing   -> parse_it state
 
@@ -56,31 +55,29 @@ parse_it state = do
 
     Just "\\q" -> return ()
 
-    Just "\\v" -> list_variables state      -- list all defined
+    Just "\\v" -> liftIO (list_variables state)      -- list all defined
                   >> parse_it state         -- variables
 
-    Just "\\f" -> list_functions state      -- list all defined
+    Just "\\f" -> liftIO (list_functions state)      -- list all defined
                   >> parse_it state         -- functions
 
-    Just "\\t" -> show_time                 -- show current time
+    Just "\\t" -> liftIO show_time                 -- show current time
                   >> parse_it state
 
     Just line -> do                         -- otherwise calculate
-
-      addHistory line
 
       {- parse it as a potential help request if it succeeds we
          parse the next command line, otherwise we channel it
          into the calculator parser -}
       case runParser help state "" line of
-        Right helpMsg  -> putStr helpMsg
+        Right helpMsg  -> liftIO (putStr helpMsg)
                           >> parse_it state
         Left _         ->
 
           -- parse it as a calculation or unit conversion
           case runParser main_parser state "" line of
 
-            Left er  -> print_error_message (show er) line
+            Left er  -> liftIO (print_error_message (show er) line)
                         >> parse_it state
 
             {- if the parser succeeds we do one of the following:
@@ -89,10 +86,11 @@ parse_it state = do
                2) If the return value is a ErrResult we print the
                   the associated error string -}
             Right (result, newState) ->
+              liftIO (
                 case result of
                   NumResult d      -> husky_result $ show d:[""]
                   UnitResult (v,u) -> husky_result $ show v:[u]
                   ErrResult err    -> putStrLn $ "Error: " ++ err
                   StrResult str    -> husky_result $ str:[""]
-
-                 >> parse_it newState
+                )
+              >> parse_it newState

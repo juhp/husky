@@ -44,6 +44,7 @@ infoString :: String
 infoString = "Welcome to husky (v" ++ version ++ ")\n"
           ++ "(C) 2009 Markus Dittrich, licensed under the GPL-3\n"
           ++ "husky comes WITHOUT ANY WARRANTY\n"
+          ++ "For help enter: \\help \n"
 
 
 -- | display output somewhat colorful

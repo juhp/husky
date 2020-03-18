@@ -16,15 +16,15 @@ OBJECTS = src/husky.hs src/CalculatorParser.hs src/CalculatorState.hs \
 	  src/ExtraFunctions.hs src/HelpParser.hs src/InfoRoutines.hs \
 	  src/Parser.hs src/PrettyPrint.hs src/TokenParser.hs \
 	  src/UnitConverter.hs src/UnitConversionParser.hs
-	  
+
 
 all: debug
 
-husky: $(OBJECTS) 
+husky: $(OBJECTS)
 	ghc -i./src $(GHC_FLAGS_RELEASE) --make src/husky.hs
 
 
-debug: $(OBJECTS) 
+debug: $(OBJECTS)
 	ghc -i./src $(GHC_FLAGS_DEVEL) --make src/husky.hs
 
 
@@ -32,7 +32,7 @@ check: $(OBJECTS)
 	ghc -i./src --make test/CalculatorTest.hs
 	ghc -i./src --make test/ConverterTest.hs
 	@./test/CalculatorTest
-	@echo 
+	@echo
 	@echo
 	@echo
 	@./test/ConverterTest
@@ -52,3 +52,20 @@ install: husky
 clean:
 	rm -f src/*.o src/*.hi src/husky test/*.o test/*.hi \
 		test/CalculatorTest test/ConverterTest
+
+stack-all:
+	stack --resolver nightly build
+	@echo
+	stack --resolver lts-15 build
+	@echo
+	stack --resolver lts-14 build
+	@echo
+	stack --resolver lts-13 build
+	@echo
+	stack --resolver lts-11 build
+	@echo
+	stack --resolver lts-10 build
+	@echo
+	stack --resolver lts-9 build
+	@echo
+	stack --resolver lts-8 build

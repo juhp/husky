@@ -1,0 +1,4 @@
+- save history
+- \help units : just display units not conversions
+- improve parser-lexer: eg allow 'conv var Unit Unit'
+- define 'it'

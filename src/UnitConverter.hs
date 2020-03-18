@@ -97,9 +97,7 @@ retrieve_unit_string unit = case unit of
 
     Nothing -> unlines . map stringify . M.toList $ allConv
       where
-        stringify x = (color_string Yellow " :: " ++ fst x ++ "\n")
-                   ++ color_string Cyan (stringify_unit . snd $ x)
-
+        stringify x = (color_string Yellow (fst x))
  where
    stringify_unit = unlines . map (description . snd) . M.toList
 
@@ -121,9 +119,9 @@ type UnitMap = M.Map String UnitConverter
 -- | allConv holds a map of all available unit conversions
 -- indexed by the unit type such as Temp, Length, ....
 allConv :: M.Map String UnitMap
-allConv = M.fromList [ ("Temp", tempConv)
-                     , ("Length", lengthConv)
-                     , ("Size", sizeConv)
+allConv = M.fromList [ ("temp", tempConv)
+                     , ("length", lengthConv)
+                     , ("size", sizeConv)
                      ]
 
 
